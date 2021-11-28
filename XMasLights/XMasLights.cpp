@@ -1,30 +1,3 @@
-#include <bitswap.h>
-#include <chipsets.h>
-#include <color.h>
-#include <colorpalettes.h>
-#include <colorutils.h>
-#include <controller.h>
-#include <cpp_compat.h>
-#include <dmx.h>
-#include <fastled_config.h>
-#include <fastled_delay.h>
-#include <fastled_progmem.h>
-#include <FastLED.h>
-#include <fastpin.h>
-#include <fastspi_bitbang.h>
-#include <fastspi_dma.h>
-#include <fastspi_nop.h>
-#include <fastspi_ref.h>
-#include <fastspi_types.h>
-#include <fastspi.h>
-#include <hsv2rgb.h>
-#include <led_sysdefs.h>
-#include <lib8tion.h>
-#include <noise.h>
-#include <pixelset.h>
-#include <pixeltypes.h>
-#include <platforms.h>
-#include <power_mgt.h>
 
 // For debugging, uncomment this line
 //#define GOFAST
@@ -88,7 +61,7 @@ void setup()
 	delay(2000);
 	// Add the LEDs so FastLED knows about them.
 	FastLED.addLeds<WS2811, DATA_PIN>(leds, NUM_LEDS);
-	FastLED.setBrightness(18);
+	FastLED.setBrightness(255);
 
 	// The best way to really get a different random number seed every time, 
 	// since Arduinos don't ship with radioactive particles...
@@ -96,12 +69,14 @@ void setup()
 	fill_solid(leds, NUM_LEDS, CRGB::Red);
 	FastLED.delay(500);
 	fill_solid(leds, NUM_LEDS, CRGB::Purple);
-	FastLED.delay(500);
+	FastLED.delay(5000);
 	fill_solid(leds, NUM_LEDS, CRGB::Blue);
 	FastLED.delay(500);
 	fill_solid(leds, NUM_LEDS, CRGB::Green);
 	FastLED.delay(500);
 
+	fill_solid(leds, NUM_LEDS, CRGB::White);
+	FastLED.delay(10000);
 	// Initialization for routine-specific stuff
 	for (led = 0; led < NUM_LEDS; led++) {
 		snowFlakes[led] = 0;

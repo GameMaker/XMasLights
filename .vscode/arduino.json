@@ -1,0 +1,5 @@
+{
+    "board": "arduino:avr:uno",
+    "sketch": "XMasLights\\XMasLights.ino",
+    "port": "COM3"
+}

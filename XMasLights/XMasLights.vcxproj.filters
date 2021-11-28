@@ -17,5 +17,9 @@
   <ItemGroup>
     <None Include="XMasLights.ino" />
   </ItemGroup>
- 
+  <ItemGroup>
+    <ClInclude Include="__vm\.XMasLights.vsarduino.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>

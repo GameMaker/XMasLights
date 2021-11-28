@@ -47,10 +47,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
-      <IgnoreStandardIncludePath>true</IgnoreStandardIncludePath>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\libraries\FastLED-3.1.3;c:\Program Files (x86)\Arduino\libraries;c:\Program Files (x86)\Arduino\hardware\arduino\avr\libraries;$(ProjectDir)..\..\libraries;c:\Program Files (x86)\Arduino\hardware\arduino\avr\cores\arduino;c:\Program Files (x86)\Arduino\hardware\arduino\avr\variants\standard;$(ProjectDir)..\XMasLights;c:\Program Files (x86)\Arduino\hardware\tools\avr\avr\include\;c:\Program Files (x86)\Arduino\hardware\tools\avr\avr\include\avr\;c:\Program Files (x86)\Arduino\hardware\tools\avr\lib\gcc\avr\4.8.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(ProjectDir)__vm\.XMasLights.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
+      <PreprocessorDefinitions>__AVR_ATmega328p__;__AVR_ATmega328P__;_VMDEBUG=1;F_CPU=16000000L;ARDUINO=10800;ARDUINO_AVR_UNO;ARDUINO_ARCH_AVR;__cplusplus=201103L;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -80,6 +80,9 @@
     <None Include="XMasLights.ino">
       <FileType>CppCode</FileType>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="__vm\.XMasLights.vsarduino.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
