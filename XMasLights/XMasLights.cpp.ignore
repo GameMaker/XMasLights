@@ -1,3 +1,4 @@
+#include <FastLED.h>
 
 // For debugging, uncomment this line
 //#define GOFAST

@@ -1,30 +1,4 @@
-#include <bitswap.h>
-#include <chipsets.h>
-#include <color.h>
-#include <colorpalettes.h>
-#include <colorutils.h>
-#include <controller.h>
-#include <cpp_compat.h>
-#include <dmx.h>
-#include <fastled_config.h>
-#include <fastled_delay.h>
-#include <fastled_progmem.h>
 #include <FastLED.h>
-#include <fastpin.h>
-#include <fastspi_bitbang.h>
-#include <fastspi_dma.h>
-#include <fastspi_nop.h>
-#include <fastspi_ref.h>
-#include <fastspi_types.h>
-#include <fastspi.h>
-#include <hsv2rgb.h>
-#include <led_sysdefs.h>
-#include <lib8tion.h>
-#include <noise.h>
-#include <pixelset.h>
-#include <pixeltypes.h>
-#include <platforms.h>
-#include <power_mgt.h>
 
 // For debugging, uncomment this line
 //#define GOFAST
@@ -72,6 +46,9 @@ int ringCutoffs[NUM_RINGS] = { 0, 54, 95, 135, 167, 196, 218, 240, 262, 281, 295
 int ringRatios[NUM_RINGS - 1];
 char cBuff;
 int snowTemp;
+int fireTemp;
+float rfac, gfac, bfac;
+#define DELAY_TIME_FIRE 60
 float snowPct;
 #define SNOW_PWR 120
 #define SNOW_MELT_HEAT 1
@@ -94,13 +71,13 @@ void setup()
 	// since Arduinos don't ship with radioactive particles...
 	randomSeed(analogRead(0) && analogRead(1) && analogRead(2) && analogRead(3) && analogRead(4) && analogRead(5));
 	fill_solid(leds, NUM_LEDS, CRGB::Red);
-	FastLED.delay(500);
+	FastLED.delay(250);
 	fill_solid(leds, NUM_LEDS, CRGB::Purple);
-	FastLED.delay(500);
+	FastLED.delay(250);
 	fill_solid(leds, NUM_LEDS, CRGB::Blue);
-	FastLED.delay(500);
+	FastLED.delay(250);
 	fill_solid(leds, NUM_LEDS, CRGB::Green);
-	FastLED.delay(500);
+	FastLED.delay(250);
 
 	// Initialization for routine-specific stuff
 	for (led = 0; led < NUM_LEDS; led++) {
@@ -110,8 +87,17 @@ void setup()
 
 void loop()
 {
-	//doCandyCane();
+	FastLED.clear();
+	for (loop1 = 0; loop1 < 300; loop1++) {
+		doFire();
+	}
 
+	doCandyCane(500);
+
+	// Clear out the snow each time.
+	for (loop1 = 0; loop1 < NUM_LEDS; loop1++) {
+		snowFlakes[loop1] = 0;
+	}
 	for (loop1 = 0; loop1 < 300; loop1++) {
 		doSnow();
 	}
@@ -137,30 +123,73 @@ void loop()
 
 /**********************************************
 *
+* doFire()
+*    Where are Chet's nuts roasting?
+*
+**********************************************/
+void doFire() {
+	for (led = 0; led < ringCutoffs[1]; led ++) {
+		leds[led] = CRGB(random8(55) + 200, random8(55) + 200, random(55) + 50);
+	}
+	for (ring = 1; ring < NUM_RINGS - 2; ring++) {
+		for (led = ringCutoffs[ring]; led < ringCutoffs[ring + 1]; led++) {
+			// Find the percentage aroung the current ring.
+			fireTemp = (float)((float)(led - ringCutoffs[ring]) / (float)(ringCutoffs[ring + 1] - ringCutoffs[ring])) *
+						   // Then multiply that by the number of leds on the ring below
+						   (ringCutoffs[ring] - ringCutoffs[ring - 1]) +
+					   // And add the base offset of the ring below
+					   ringCutoffs[ring - 1] +
+					   // And make it drift left, right, or straight down
+					   (random8(3) - 1);
+			rfac = ((random8(32) + 190) / 255.0f);
+			gfac = ((random8(32) + 160) / 255.0f);
+			bfac = ((random8(32) + 120) / 255.0f);
+			leds[led] = CRGB(leds[fireTemp].r * rfac, 
+				leds[fireTemp].g * gfac, 
+				leds[fireTemp].b * bfac);
+		}
+	}
+	FastLED.delay(DELAY_TIME_FIRE);
+}
+
+/**********************************************
+*
 * doCandyCaneSpin()
 *
 **********************************************/
-void doCandyCane() {
-	Serial.println("Candy Cane!");
-	FastLED.delay(5000);
-	fill_solid(leds, NUM_LEDS, CRGB::Black);
-	int numOfLightsThisRing;
-	float tempSin;
-	for (loop1 = 0; loop1 < 250; loop1++) {
-		//Serial.println("In loop1");
-		//FastLED.delay(100);
-		for (ring = 0; ring < 1; ring++) {
-			//Serial.println("in Ring");
-			//Serial.println(ring);
-			//FastLED.delay(100);
-			numOfLightsThisRing = ringCutoffs[ring + 1] - ringCutoffs[ring];
-			for (led = 0; led < numOfLightsThisRing - 1; led++) {
-				leds[led] = CRGB(loop1, loop1, loop1);
+void doCandyCane(int frames) {
+	for (loop2 = frames; loop2 >= 0; loop2--)
+	{
+		for (loop1 = 0; loop1 < NUM_LEDS; loop1++) {
+			if ((loop1 + loop2) % 20 > 10) {
+				leds[loop1] = CRGB::Red;
+			} else {
+				leds[loop1] = CRGB::White;
 			}
 		}
-		leds[0] = CRGB::Purple;
 		FastLED.delay(DELAY_TIME_FAST);
 	}
+
+	// Honestly I have no idea what this used to do...
+	// // FastLED.delay(5000);
+	// fill_solid(leds, NUM_LEDS, CRGB::Black);
+	// int numOfLightsThisRing;
+	// float tempSin;
+	// for (loop1 = 0; loop1 < 250; loop1++) {
+	// 	//Serial.println("In loop1");
+	// 	//FastLED.delay(100);
+	// 	for (ring = 0; ring < 1; ring++) {
+	// 		//Serial.println("in Ring");
+	// 		//Serial.println(ring);
+	// 		//FastLED.delay(100);
+	// 		numOfLightsThisRing = ringCutoffs[ring + 1] - ringCutoffs[ring];
+	// 		for (led = 0; led < numOfLightsThisRing - 1; led++) {
+	// 			leds[led] = CRGB(loop1, loop1, loop1);
+	// 		}
+	// 	}
+	// 	leds[0] = CRGB::Purple;
+	// 	FastLED.delay(DELAY_TIME_FAST);
+	// }
 }
 
 /**********************************************
@@ -207,13 +236,22 @@ void doSnow() {
 	// Generate a random flake
 	// Start at the bottom ring, and float them all down
 
+	// Start at the bototm and go up.
 	for (ring = 0; ring < NUM_RINGS - 1; ring++) {
+		// Iterate over the LEDs in the ring.
 		for (led = ringCutoffs[ring]; led < ringCutoffs[ring + 1]; led++) {
+			// If there's a snowflake there
 			if (snowFlakes[led] > 0) {
+				// And we're not on the bottom ring
 				if (ring > 0) {
+					// Try to find a place for this snowflake to fall. 
+					// First find the current LEDs percentage around its own ring
 					snowTemp = ((float)((float)(led - ringCutoffs[ring]) / (float)(ringCutoffs[ring + 1] - ringCutoffs[ring])) *
+						// Then multiply that by the number of leds on the ring below
 						(ringCutoffs[ring] - ringCutoffs[ring - 1])) +
+						// And add the base offset of the ring below
 						ringCutoffs[ring - 1] +
+						// And make it drift left, right, or straight down
 						(random8(3) - 1);
 					if (snowFlakes[snowTemp] < SNOW_FULL_CUTOFF) {
 						//Serial.print("Going from ");
@@ -274,7 +312,7 @@ void doSnow() {
 			leds[led] = CRGB(snowFlakes[led], snowFlakes[led], snowFlakes[led]);
 		//}
 	}
-	leds[0] = CRGB::Yellow;
+	// leds[0] = CRGB::Yellow;
 	FastLED.delay(DELAY_TIME_SNOW);
 }
 
