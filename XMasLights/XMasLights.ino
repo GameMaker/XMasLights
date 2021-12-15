@@ -15,20 +15,11 @@
 #define DELAY_TIME_FAST 30
 #endif
 
-enum LED_CHANGE_TYPE
-{
-	LCT_IMMEDIATE = 0,
-	LCT_PERCENT = 1
-};
-
 CRGB leds[NUM_LEDS];
-CRGB ledTargets[NUM_LEDS];
-CRGB ledDeltas[NUM_LEDS];
-LED_CHANGE_TYPE ledChangeTypes[NUM_LEDS];
 
 // UTILITY OBJECTS
 char debugString[1024];
-int loop1, loop2, loop3, temp1, temp2, temp3;
+int loop1, loop2, loop3, temp1, temp2, temp3, patternloop;
 
 // FOR ROUTINE-SPECIFIC STUFF
 // SNOW & other radial stuff
@@ -43,12 +34,9 @@ int lightSpot = 0;
 #define NUM_RINGS 11
 // Note that the first ring needs to start at 0!
 int ringCutoffs[NUM_RINGS] = {0, 54, 95, 135, 167, 196, 218, 240, 262, 281, 295};
-int ringRatios[NUM_RINGS - 1];
 char cBuff;
+
 int snowTemp;
-int fireTemp;
-float rfac, gfac, bfac;
-#define DELAY_TIME_FIRE 60
 float snowPct;
 #define SNOW_PWR 120
 #define SNOW_MELT_HEAT 1
@@ -57,7 +45,28 @@ float snowPct;
 #define NUM_FLAKES_TO_FALL_PER_FRAME 4
 #define DELAY_TIME_SNOW 160
 int snowFlakes[NUM_LEDS];
+
+int fireTemp;
+float rfac, gfac, bfac;
+#define DELAY_TIME_FIRE 60
+
 int ring, led; // temp - for use in loops
+
+enum PATTERN
+{
+	FIRE,
+	RAINBOW,
+	CANDYCANE,
+	SNOW,
+	SPARKLE,
+	CHASEDOWN,
+	CHASEUP,
+	REDGREEN,
+	COLORRACE,
+	OLDSCHOOL,
+	NUM_OF_PATTERNS // must always be last
+};
+int patterns[NUM_OF_PATTERNS];
 
 void setup()
 {
@@ -65,7 +74,6 @@ void setup()
 	delay(2000);
 	// Add the LEDs so FastLED knows about them.
 	FastLED.addLeds<WS2811, DATA_PIN>(leds, NUM_LEDS);
-	FastLED.setBrightness(18);
 
 	// The best way to really get a different random number seed every time,
 	// since Arduinos don't ship with radioactive particles...
@@ -82,44 +90,79 @@ void setup()
 
 void loop()
 {
-	FastLED.clear();
-	for (loop1 = 0; loop1 < 300; loop1++)
+	CreateNewPatternList(patterns);
+	// shuffle(patterns, 5);
+	for (patternloop = 0; patternloop < NUM_OF_PATTERNS; patternloop++)
 	{
-		doFire();
+		fill_solid(leds, NUM_LEDS, CRGB::Black);
+		FastLED.clear();
+		switch (patterns[patternloop])
+		{
+		case FIRE:
+			FastLED.setBrightness(48);
+			doFire(150);
+			break;
+		case RAINBOW:
+			FastLED.setBrightness(48);
+			doRainbow(500);
+			break;
+		case CANDYCANE:
+			FastLED.setBrightness(24);
+			doCandyCane(150);
+			break;
+		case SNOW:
+			FastLED.setBrightness(80);
+			doSnow(150);
+			break;
+		case SPARKLE:
+			FastLED.setBrightness(64);
+			doSparkle(CHSV(random8(), 255, 255), 5, 150);
+			break;
+		case CHASEDOWN:
+			FastLED.setBrightness(64);
+			temp1 = (random8() % 20) + 10;
+			doChaseDown(CHSV(random8(), 255, 255), temp1, temp1, 250);
+			break;
+		case CHASEUP:
+			FastLED.setBrightness(64);
+			temp1 = (random8() % 20) + 10;
+			doChaseUp(CHSV(random8(), 255, 255), temp1, temp1, 250);
+			break;
+		case REDGREEN:
+			FastLED.setBrightness(64);
+			doRedGreenFlicker(5);
+			break;
+		case COLORRACE:
+			FastLED.setBrightness(32);
+			temp1 = (random8()%1) + 5;
+			for (temp2 = 0; temp2 < temp1; temp2++) {
+				doColorRacer(CHSV(random8(), 255, 255));
+			}
+			break;
+		case OLDSCHOOL:
+			FastLED.setBrightness(32);
+			doOldSchool(25);
+			break;
+		}
 	}
+}
 
-	doCandyCane(500);
-
-	// Clear out the snow each time.
-	for (loop1 = 0; loop1 < NUM_LEDS; loop1++)
+/**********************************************
+*
+* doRainbow()
+*    A fast rainbow chase down the tree.
+*
+**********************************************/
+void doRainbow(int frames)
+{
+	for (loop1 = 0; loop1 < frames; loop1++)
 	{
-		snowFlakes[loop1] = 0;
+		for (led = 0; led < NUM_LEDS; led++)
+		{
+			leds[led] = CHSV((led + loop1) % 255, 255, 255);
+		}
+		FastLED.show();
 	}
-	for (loop1 = 0; loop1 < 300; loop1++)
-	{
-		doSnow();
-	}
-
-	redGreenFlicker(15);
-
-	sparkle(CRGB::Gold, 50, 50);
-	oldSchool(1000);
-	sparkle(CRGB::Navy, 250, 50);
-	colorRacer(CRGB(200, 50, 50)); // colorRacer can take a color you define (R, G, B)
-	sparkle(CRGB::HotPink, 50, 50);
-	colorRacer(CRGB::White);	   // Or use a whole bunch of built-in colors
-	sparkle(CRGB::LawnGreen, 50, 50);
-	colorRacer(CRGB::Blue);
-	oldSchool(1000);
-	colorRacer(CRGB::Yellow);
-	for (int i = 0; i < 10; i++)
-	{
-		colorChaseDown(CRGB::Red, 10, 20, 30);
-		colorChaseUp(CRGB::Red, 10, 20, 30);
-	}
-	colorChaseDown(CRGB::Pink, 15, 45, 100);
-	oldSchool(1000);
-	colorChaseUp(CRGB::Pink, 15, 45, 100);
 }
 
 /**********************************************
@@ -128,33 +171,36 @@ void loop()
 *    Where are Chet's nuts roasting?
 *
 **********************************************/
-void doFire()
+void doFire(int frames)
 {
-	for (led = 0; led < ringCutoffs[1]; led++)
+	for (loop1 = 0; loop1 < frames; loop1++)
 	{
-		leds[led] = CRGB(random8(55) + 200, random8(55) + 200, random(55) + 50);
-	}
-	for (ring = 1; ring < NUM_RINGS - 2; ring++)
-	{
-		for (led = ringCutoffs[ring]; led < ringCutoffs[ring + 1]; led++)
+		for (led = 0; led < ringCutoffs[1]; led++)
 		{
-			// Find the percentage aroung the current ring.
-			fireTemp = (float)((float)(led - ringCutoffs[ring]) / (float)(ringCutoffs[ring + 1] - ringCutoffs[ring])) *
-						   // Then multiply that by the number of leds on the ring below
-						   (ringCutoffs[ring] - ringCutoffs[ring - 1]) +
-					   // And add the base offset of the ring below
-					   ringCutoffs[ring - 1] +
-					   // And make it drift left, right, or straight down
-					   (random8(3) - 1);
-			rfac = ((random8(32) + 190) / 255.0f);
-			gfac = ((random8(32) + 160) / 255.0f);
-			bfac = ((random8(32) + 120) / 255.0f);
-			leds[led] = CRGB(leds[fireTemp].r * rfac,
-							 leds[fireTemp].g * gfac,
-							 leds[fireTemp].b * bfac);
+			leds[led] = CRGB(random8(55) + 200, random8(55) + 200, random(55) + 50);
 		}
+		for (ring = 1; ring < NUM_RINGS - 2; ring++)
+		{
+			for (led = ringCutoffs[ring]; led < ringCutoffs[ring + 1]; led++)
+			{
+				// Find the percentage aroung the current ring.
+				fireTemp = (float)((float)(led - ringCutoffs[ring]) / (float)(ringCutoffs[ring + 1] - ringCutoffs[ring])) *
+							   // Then multiply that by the number of leds on the ring below
+							   (ringCutoffs[ring] - ringCutoffs[ring - 1]) +
+						   // And add the base offset of the ring below
+						   ringCutoffs[ring - 1] +
+						   // And make it drift left, right, or straight down
+						   (random8(3) - 1);
+				rfac = ((random8(32) + 190) / 255.0f);
+				gfac = ((random8(32) + 160) / 255.0f);
+				bfac = ((random8(32) + 120) / 255.0f);
+				leds[led] = CRGB(leds[fireTemp].r * rfac,
+								 leds[fireTemp].g * gfac,
+								 leds[fireTemp].b * bfac);
+			}
+		}
+		FastLED.delay(DELAY_TIME_FIRE);
 	}
-	FastLED.delay(DELAY_TIME_FIRE);
 }
 
 /**********************************************
@@ -168,9 +214,9 @@ void doCandyCane(int frames)
 	{
 		for (loop2 = 0; loop2 < NUM_RINGS - 1; loop2++)
 		{
-			temp1 = ringCutoffs[loop2]; // start of current ring
+			temp1 = ringCutoffs[loop2];		// start of current ring
 			temp2 = ringCutoffs[loop2 + 1]; // end of current ring / start of next ring
-			temp3 = temp2 - temp1; // size of current ring
+			temp3 = (temp2 - temp1) / 2;	// 1/2 of current ring
 			for (loop3 = temp1; loop3 < temp2; loop3++)
 			{
 				if ((loop1 + loop3) % temp3 > (temp3 / 2))
@@ -193,7 +239,7 @@ void doCandyCane(int frames)
 *    Let it snow, let it snow!
 *
 **********************************************/
-void doSnow()
+void doSnow(int frames)
 {
 	//Serial.println("Let it snow!");
 	// STEP 1 - SET UP YOUR TREE
@@ -233,123 +279,77 @@ void doSnow()
 	// Start at the bottom ring, and float them all down
 
 	// Start at the bototm and go up.
-	for (ring = 0; ring < NUM_RINGS - 1; ring++)
+	for (loop1 = 0; loop1 < frames; loop1++)
 	{
-		// Iterate over the LEDs in the ring.
-		for (led = ringCutoffs[ring]; led < ringCutoffs[ring + 1]; led++)
+		for (ring = 0; ring < NUM_RINGS - 1; ring++)
 		{
-			// If there's a snowflake there
-			if (snowFlakes[led] > 0)
+			// Iterate over the LEDs in the ring.
+			for (led = ringCutoffs[ring]; led < ringCutoffs[ring + 1]; led++)
 			{
-				// And we're not on the bottom ring
-				if (ring > 0)
+				// If there's a snowflake there
+				if (snowFlakes[led] > 0)
 				{
-					// Try to find a place for this snowflake to fall.
-					// First find the current LEDs percentage around its own ring
-					snowTemp = ((float)((float)(led - ringCutoffs[ring]) / (float)(ringCutoffs[ring + 1] - ringCutoffs[ring])) *
-								// Then multiply that by the number of leds on the ring below
-								(ringCutoffs[ring] - ringCutoffs[ring - 1])) +
-							   // And add the base offset of the ring below
-							   ringCutoffs[ring - 1] +
-							   // And make it drift left, right, or straight down
-							   (random8(3) - 1);
-					if (snowFlakes[snowTemp] < SNOW_FULL_CUTOFF)
+					// And we're not on the bottom ring
+					if (ring > 0)
 					{
-						//Serial.print("Going from ");
-						//Serial.print(led);
-						//Serial.print(" to ");
-						//Serial.println(snowTemp);
-						snowFlakes[snowTemp] = max(snowFlakes[led], min(250, snowFlakes[snowTemp] + SNOW_PWR));
-						//Serial.print("Snow ");
-						//Serial.print(snowTemp);
-						//Serial.print(" is now ");
-						//Serial.print(snowFlakes[snowTemp]);
-						//Serial.print(", and sf[");
-						//Serial.print(led);
-						//Serial.print("] was ");
-						//Serial.println(snowFlakes[led]);
-						snowFlakes[led] = 0;
+						// Try to find a place for this snowflake to fall.
+						// First find the current LEDs percentage around its own ring
+						snowTemp = ((float)((float)(led - ringCutoffs[ring]) / (float)(ringCutoffs[ring + 1] - ringCutoffs[ring])) *
+									// Then multiply that by the number of leds on the ring below
+									(ringCutoffs[ring] - ringCutoffs[ring - 1])) +
+								   // And add the base offset of the ring below
+								   ringCutoffs[ring - 1] +
+								   // And make it drift left, right, or straight down
+								   (random8(3) - 1);
+						if (snowFlakes[snowTemp] < SNOW_FULL_CUTOFF)
+						{
+							snowFlakes[snowTemp] = max(snowFlakes[led], min(250, snowFlakes[snowTemp] + SNOW_PWR));
+							snowFlakes[led] = 0;
+						}
 					}
-					//Serial.print("ON: ");
 				}
 			}
-			//Serial.println(led);
 		}
-	}
-	for (led = ringCutoffs[NUM_RINGS - 1]; led < NUM_LEDS; led++)
-	{
-		if (snowFlakes[led] > 0)
+		for (led = ringCutoffs[NUM_RINGS - 1]; led < NUM_LEDS; led++)
 		{
-			snowTemp = ((float)((float)(led - ringCutoffs[NUM_RINGS - 1]) / (float)(NUM_LEDS - ringCutoffs[NUM_RINGS - 1])) *
-						(ringCutoffs[NUM_RINGS - 1] - ringCutoffs[NUM_RINGS - 2])) +
-					   ringCutoffs[NUM_RINGS - 2] +
-					   (random8(3) - 1);
-			//Serial.println(led - ringCutoffs[NUM_RINGS - 1]);
-			//Serial.println(NUM_LEDS - ringCutoffs[NUM_RINGS - 1]);
-			//Serial.println((float)((float)(led - ringCutoffs[NUM_RINGS - 1]) / (float)(NUM_LEDS - ringCutoffs[NUM_RINGS - 1])));
-			//Serial.println(ringCutoffs[NUM_RINGS - 1] - ringCutoffs[NUM_RINGS - 2]);
-			//Serial.println((float)((float)(led - ringCutoffs[NUM_RINGS - 1]) / (float)(NUM_LEDS - ringCutoffs[NUM_RINGS - 1])) * (ringCutoffs[NUM_RINGS - 1] - ringCutoffs[NUM_RINGS - 2]));
-			//Serial.println(((float)((float)(led - ringCutoffs[NUM_RINGS - 1]) / (float)(NUM_LEDS - ringCutoffs[NUM_RINGS - 1])) * (ringCutoffs[NUM_RINGS - 1] - ringCutoffs[NUM_RINGS - 2])) + ringCutoffs[NUM_RINGS - 2]);
-			if (snowFlakes[snowTemp] < SNOW_FULL_CUTOFF)
+			if (snowFlakes[led] > 0)
 			{
-				//Serial.print("Going from ");
-				//Serial.print(led);
-				//Serial.print(" to ");
-				//Serial.println(snowTemp);
-				snowFlakes[snowTemp] = min(250, snowFlakes[snowTemp] + SNOW_PWR);
-				snowFlakes[led] = 0;
+				snowTemp = ((float)((float)(led - ringCutoffs[NUM_RINGS - 1]) / (float)(NUM_LEDS - ringCutoffs[NUM_RINGS - 1])) *
+							(ringCutoffs[NUM_RINGS - 1] - ringCutoffs[NUM_RINGS - 2])) +
+						   ringCutoffs[NUM_RINGS - 2] +
+						   (random8(3) - 1);
+				if (snowFlakes[snowTemp] < SNOW_FULL_CUTOFF)
+				{
+					snowFlakes[snowTemp] = min(250, snowFlakes[snowTemp] + SNOW_PWR);
+					snowFlakes[led] = 0;
+				}
 			}
-			//Serial.print("ON: ");
 		}
-		//Serial.println(led);
-	}
-	for (led = 0; led < ringCutoffs[SNOW_MELT_HOW_MANY_RINGS_HIGH]; led++)
-	{
-		snowFlakes[led] = max(0, snowFlakes[led] - SNOW_MELT_HEAT);
-	}
-	for (snowTemp = 0; snowTemp < NUM_FLAKES_TO_FALL_PER_FRAME; snowTemp++)
-	{
-		led = ringCutoffs[NUM_RINGS - 1] + (random8((NUM_LEDS - ringCutoffs[NUM_RINGS - 1])));
-		snowFlakes[led] = min(250, snowFlakes[led] + SNOW_PWR);
-	}
-	//fill_solid(leds, NUM_LEDS, CRGB::Black);
-	for (led = 0; led < NUM_LEDS; led++)
-	{
-		//if (snowFlakes[led] > 0) {
-		leds[led] = CRGB(snowFlakes[led], snowFlakes[led], snowFlakes[led]);
-		//}
-	}
-	// leds[0] = CRGB::Yellow;
-	FastLED.delay(DELAY_TIME_SNOW);
-}
-
-/**********************************************
-*
-* Update()
-*    This is where all the LEDs are "rendered", using whatever rules are set up for them.
-*
-**********************************************/
-void update()
-{
-	for (loop1 = 0; loop1 < NUM_LEDS; loop1++)
-	{
-		switch (ledChangeTypes[loop1])
+		for (led = 0; led < ringCutoffs[SNOW_MELT_HOW_MANY_RINGS_HIGH]; led++)
 		{
-		case LCT_IMMEDIATE:
-			leds[loop1] = ledTargets[loop1];
-			break;
+			snowFlakes[led] = max(0, snowFlakes[led] - SNOW_MELT_HEAT);
 		}
+		for (snowTemp = 0; snowTemp < NUM_FLAKES_TO_FALL_PER_FRAME; snowTemp++)
+		{
+			led = ringCutoffs[NUM_RINGS - 1] + (random8((NUM_LEDS - ringCutoffs[NUM_RINGS - 1])));
+			snowFlakes[led] = min(250, snowFlakes[led] + SNOW_PWR);
+		}
+		for (led = 0; led < NUM_LEDS; led++)
+		{
+			leds[led] = CRGB(snowFlakes[led], snowFlakes[led], snowFlakes[led]);
+		}
+		FastLED.delay(DELAY_TIME_SNOW);
 	}
 }
 
 /**********************************************
 *
-* Sparkle
+* doSparkle
 *    Take a base color and flicker it, like shiny garland
 *    Note - flickerOdds (2nd parameter) is a number that says how many chances in 1000 each light has each frame to sparkle
 *
 **********************************************/
-void sparkle(CRGB baseColor, int flickerOdds, int frames)
+void doSparkle(CRGB baseColor, int flickerOdds, int frames)
 {
 	for (loop2 = 0; loop2 < frames; loop2++)
 	{
@@ -364,17 +364,17 @@ void sparkle(CRGB baseColor, int flickerOdds, int frames)
 				leds[loop1] = baseColor;
 			}
 		}
-		FastLED.delay(DELAY_TIME_SLOW);
+		FastLED.delay(DELAY_TIME_FAST);
 	}
 }
 
 /**********************************************
 *
-* ColorChaseDown
+* doChaseDown
 *    Race a couple of dashes down the tree
 *
 **********************************************/
-void colorChaseDown(CRGB theColor, int onsize, int offsize, int frames)
+void doChaseDown(CRGB theColor, int onsize, int offsize, int frames)
 {
 	FastLED.clear();
 	temp1 = 0;
@@ -399,11 +399,11 @@ void colorChaseDown(CRGB theColor, int onsize, int offsize, int frames)
 
 /**********************************************
 *
-* ColorChaseUp
+* doChaseUp
 *    Race a couple of dashes up the tree
 *
 **********************************************/
-void colorChaseUp(CRGB theColor, int onsize, int offsize, int frames)
+void doChaseUp(CRGB theColor, int onsize, int offsize, int frames)
 {
 	FastLED.clear();
 	temp1 = NUM_LEDS * 30;
@@ -432,7 +432,7 @@ void colorChaseUp(CRGB theColor, int onsize, int offsize, int frames)
 *    Flicker between red/green alternating lights
 *
 **********************************************/
-void redGreenFlicker(int numberOfTimesToFlicker)
+void doRedGreenFlicker(int numberOfTimesToFlicker)
 {
 	Serial.println("RG Flickering");
 	for (loop2 = 0; loop2 < numberOfTimesToFlicker; loop2++)
@@ -470,14 +470,13 @@ void redGreenFlicker(int numberOfTimesToFlicker)
 *    Race a color up the string
 *
 **********************************************/
-void colorRacer(CRGB colorToRace)
+void doColorRacer(CRGB colorToRace)
 {
 	Serial.println("Racing");
 	for (loop1 = 0; loop1 < NUM_LEDS; loop1++)
 	{
 		leds[loop1] = colorToRace;
 		FastLED.show();
-		FastLED.delay(DELAY_TIME_FAST);
 	}
 }
 
@@ -487,13 +486,52 @@ void colorRacer(CRGB colorToRace)
 *    Good old fashioned, sparkley colors.
 *
 **********************************************/
-void oldSchool(int frames) {
+void doOldSchool(int frames)
+{
 	CHSV temphsv;
-	for (loop1 = 0; loop1 < frames; loop1++) {
-		for (loop2 = 0; loop2 < NUM_LEDS; loop2++) {
+	for (loop1 = 0; loop1 < frames; loop1++)
+	{
+		for (loop2 = 0; loop2 < NUM_LEDS; loop2++)
+		{
+			// Default to very colorful...
 			leds[loop2] = CHSV(random8(), 255, 255);
+			// Every once in a while, make one white
+			if (random8() < 5) {
+				leds[loop2] = CRGB::White;
+			}
 		}
 		FastLED.show();
 		FastLED.delay(DELAY_TIME_SLOW);
+	}
+}
+
+/**********************************************
+*
+* UTIL: Shuffle
+*    Shuffles an array of ints, which are used to determine which pattern to play.
+*
+**********************************************/
+void shuffle(int *array, size_t n)
+{
+	for (loop1 = 0; loop1 < n - 1; loop1++)
+	{
+		temp1 = loop1 + rand() / (RAND_MAX / (n - loop1) + 1);
+		temp2 = array[temp1];
+		array[temp1] = array[loop1];
+		array[loop1] = temp2;
+	}
+}
+
+/**********************************************
+*
+* UTIL: CreateNewPatternList
+*    Create an array of ints we'll use (after shuffling) to decide which pattern to play.
+*
+**********************************************/
+void CreateNewPatternList(int *array)
+{
+	for (loop1 = 0; loop1 < NUM_OF_PATTERNS; loop1++)
+	{
+		array[loop1] = loop1;
 	}
 }
