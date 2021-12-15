@@ -73,7 +73,7 @@ enum PATTERN
 int patterns[NUM_OF_PATTERNS];
 // Each pattern runs for about 3 seconds * DURATION_SCALE.
 // If we add more LEDs, the duration will go up.
-#define DURATION_SCALE 5
+#define DURATION_SCALE 10
 
 void setup()
 {
@@ -99,7 +99,7 @@ void setup()
 
 void loop()
 {
-	shuffle(patterns, NUM_OF_PATTERNS * 2);
+	shuffle(patterns, 5);
 	for (patternloop = 0; patternloop < NUM_OF_PATTERNS; patternloop++)
 	{
 		fill_solid(leds, NUM_LEDS, CRGB::Black);
@@ -112,7 +112,7 @@ void loop()
 			break;
 		case FIRE:
 			FastLED.setBrightness(40);
-			doFire(25);
+			doFire(25 * DURATION_SCALE);
 			break;
 		case RAINBOW:
 			FastLED.setBrightness(28);
@@ -564,10 +564,11 @@ void shuffle(int *array, size_t n)
 {
 	for (loop1 = 0; loop1 < n - 1; loop1++)
 	{
-		temp1 = loop1 + rand() / (RAND_MAX / (n - loop1) + 1);
-		temp2 = array[temp1];
-		array[temp1] = array[loop1];
-		array[loop1] = temp2;
+		temp1 = rand() % NUM_OF_PATTERNS;
+		temp2 = rand() % NUM_OF_PATTERNS;
+		temp3 = array[temp1];
+		array[temp1] = array[temp2];
+		array[temp2] = temp3;
 	}
 }
 
