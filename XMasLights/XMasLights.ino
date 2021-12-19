@@ -50,18 +50,17 @@ float snowPct;
 byte snowFlakes[NUM_LEDS];
 
 int fireTemp;
-float rfac, gfac, bfac;
-#define DELAY_TIME_FIRE 60
+#define DELAY_TIME_FIRE 90
 
 int ring, led; // temp - for use in loops
 
 enum PATTERN
 {
+	FIRE,
 	COLORRACE,
 	RINGBOUNCE,
 	SNOW,
 	CANDYCANE,
-	FIRE,
 	RAINBOW,
 	SPARKLE,
 	CHASEDOWN,
@@ -174,14 +173,17 @@ void doRingBounce(int frames)
 	btemp = false;
 	for (loop1 = 0; loop1 < frames; loop1++)
 	{
-		temp2 = abs(sin(ftemp1)) * (NUM_RINGS-1);
-		if (!btemp) {
-			if (!temp2) {
+		temp2 = abs(sin(ftemp1)) * (NUM_RINGS - 1);
+		if (!btemp)
+		{
+			if (!temp2)
+			{
 				ctemp1 = CHSV(random8(), 255, 255);
 				btemp = true;
 			}
 		}
-		if (temp2) {
+		if (temp2)
+		{
 			btemp = false;
 		}
 		FastLED.clear();
@@ -221,11 +223,32 @@ void doRainbow(int frames)
 **********************************************/
 void doFire(int frames)
 {
+#define FIRE_HORIZONTAL_HEAT_LOSS 0.95
+float rfac, gfac, bfac;
 	for (loop1 = 0; loop1 < frames; loop1++)
 	{
+		// Fill the first ring with high-variance sparks to fuel the flames.
+		// First we diffuse the current flames. Handle the outer ones first.
+		leds[0] = CRGB(avg8(leds[0].r, leds[1].r) * FIRE_HORIZONTAL_HEAT_LOSS,
+					   avg8(leds[0].g, leds[1].g) * FIRE_HORIZONTAL_HEAT_LOSS,
+					   avg8(leds[0].b, leds[1].b) * FIRE_HORIZONTAL_HEAT_LOSS);
+		leds[ringCutoffs[1] - 1] = CRGB(avg8(leds[ringCutoffs[1] - 1].r, leds[ringCutoffs[1] - 2].r) * FIRE_HORIZONTAL_HEAT_LOSS,
+										avg8(leds[ringCutoffs[1] - 1].g, leds[ringCutoffs[1] - 2].g) * FIRE_HORIZONTAL_HEAT_LOSS,
+										avg8(leds[ringCutoffs[1] - 1].b, leds[ringCutoffs[1] - 2].b) * FIRE_HORIZONTAL_HEAT_LOSS);
+		// Then iterate over the middle of the ring
+		for (led = 1; led < ringCutoffs[1] - 2; led++)
+		{
+			leds[led] = CRGB(((leds[led].r / 3) + (leds[led - 1].r / 3) + (leds[led + 1].r / 3)) * FIRE_HORIZONTAL_HEAT_LOSS,
+							 ((leds[led].g / 3) + (leds[led - 1].g / 3) + (leds[led + 1].g / 3)) * FIRE_HORIZONTAL_HEAT_LOSS,
+							 ((leds[led].b / 3) + (leds[led - 1].b / 3) + (leds[led + 1].b / 3)) * FIRE_HORIZONTAL_HEAT_LOSS);
+		}
+		// Then we randomly spark some of the LEDs to very high brightness.
 		for (led = 0; led < ringCutoffs[1]; led++)
 		{
-			leds[led] = CRGB(random8(55) + 200, random8(55) + 200, random(55) + 50);
+			if (random8() < 25)
+			{
+				leds[led] = CRGB(random8(55) + 200, random8(55) + 150, random(55) + 50);
+			}
 		}
 		for (ring = 1; ring < NUM_RINGS - 2; ring++)
 		{
@@ -239,9 +262,9 @@ void doFire(int frames)
 						   ringCutoffs[ring - 1] +
 						   // And make it drift left, right, or straight down
 						   (random8(3) - 1);
-				rfac = ((random8(32) + 190) / 255.0f);
-				gfac = ((random8(32) + 160) / 255.0f);
-				bfac = ((random8(32) + 120) / 255.0f);
+				rfac = ((random8(32) + 175) / 255.0f);
+				gfac = ((random8(32) + 150) / 255.0f);
+				bfac = ((random8(32) + 90) / 255.0f);
 				leds[led] = CRGB(leds[fireTemp].r * rfac,
 								 leds[fireTemp].g * gfac,
 								 leds[fireTemp].b * bfac);
